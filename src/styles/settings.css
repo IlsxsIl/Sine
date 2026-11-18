@@ -191,12 +191,12 @@
   display: inline-block;
 }
 
-dialog::backdrop {
+.sineItemPreferenceDialog::backdrop {
   background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(3px);
 }
 
-dialog {
+.sineItemPreferenceDialog {
   border-radius: 5px;
   max-height: 96vh;
   max-width: 96vw;
@@ -210,7 +210,7 @@ dialog {
   min-width: 60vw;
 }
 
-dialog[open] {
+.sineItemPreferenceDialog[open] {
   display: block !important;
   cursor: default !important;
 }
@@ -609,5 +609,91 @@ dialog[open] {
 
   .sineItemPreferenceDialogTopBar {
     border-color: rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Zen's standalone settings window does not load Firefox's preferences styles. */
+#zen-settings-pane-sineMods {
+  min-width: 0;
+
+  #sineInstallationGroup,
+  #sineInstalledGroup {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+  }
+
+  #sineInstallationHeader {
+    align-items: center;
+    gap: var(--zen-space-8);
+  }
+
+  .description-deemphasized {
+    color: var(--zen-settings-muted-color);
+    margin-block: var(--zen-space-8);
+  }
+
+  button {
+    appearance: none;
+    border: none;
+    border-radius: var(--zen-border-radius-8);
+    background-color: var(--zen-settings-button-background);
+    color: inherit;
+    font: inherit;
+
+    &:enabled:hover {
+      background-color: var(--zen-settings-button-background-hover);
+    }
+
+    &:focus-visible {
+      outline: var(--focus-outline);
+      outline-offset: var(--focus-outline-offset);
+    }
+
+    &:disabled {
+      opacity: var(--zen-opacity-50);
+    }
+  }
+
+  .sineMarketplaceItemButton,
+  .auto-update-toggle[enabled] {
+    background-color: AccentColor !important;
+    color: AccentColorText !important;
+  }
+
+  .sineCKSOption-input {
+    color: inherit;
+    border-color: var(--zen-settings-separator-color);
+  }
+
+  #sineInstallationCustom,
+  #sineInstalledGroup .indent {
+    flex-wrap: wrap;
+  }
+
+  #sineInstallationCustom spacer {
+    flex: 1;
+  }
+
+  .sineItem {
+    border-color: var(--zen-settings-separator-color);
+  }
+
+  .sineItemPreferenceDialog {
+    background: var(--zen-settings-background, Canvas);
+    color: var(--zen-settings-text-color);
+    min-width: min(520px, 90vw);
+  }
+
+  .sineItemPreferenceDialogTopBar {
+    border-color: var(--zen-settings-separator-color);
+  }
+
+  .separator-label {
+    background: var(--zen-settings-background, Canvas);
+    color: var(--zen-settings-muted-color);
   }
 }

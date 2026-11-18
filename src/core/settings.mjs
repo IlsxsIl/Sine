@@ -9,6 +9,7 @@
 import * as domUtils from "../utils/dom.mjs";
 import cmdPalette from "../services/cmdPalette.mjs";
 import updates from "../services/updates.mjs";
+import { initSettingsPane } from "./settings-host.mjs";
 
 const ucAPI = ChromeUtils.importESModule(
   "chrome://userscripts/content/utils/uc_api.sys.mjs"
@@ -18,8 +19,10 @@ const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/util
 const manager = window.manager;
 delete window.manager;
 
-if (ucAPI.utils.fork === "zen") {
-  document.querySelector("#category-zen-marketplace").remove();
+const isNativeZenSettings = !!document.getElementById("zen-settings-categories");
+
+if (ucAPI.utils.fork === "zen" && !isNativeZenSettings) {
+  document.querySelector("#category-zen-marketplace")?.remove();
   domUtils
     .waitForElm("#ZenMarketplaceCategory")
     .then((el) => el.remove())
@@ -34,74 +37,33 @@ if (ucAPI.utils.fork === "zen") {
     );
 }
 
-// Inject settings styles and locales
+// Zen's standalone XUL window has a linkset instead of an HTML head.
 domUtils.appendXUL(
-  document.head,
+  document.head || document.querySelector("linkset") || document.documentElement,
   '<link rel="stylesheet" href="chrome://userscripts/content/styles/settings.css"/>'
 );
 
 domUtils.injectLocale("sine-preferences");
 
-let sineIsActive = false;
-
-// Add sine tab to the selection sidebar
-const categories = document.querySelector("#categories");
-const generalCategory = categories.querySelector("#category-general");
-const tabImage = "chrome://userscripts/content/assets/images/saturn.svg";
-let sineTab;
-if (generalCategory.tagName === "html:moz-page-nav-button") {
-  sineTab = domUtils.appendXUL(
-    categories,
-    `
-      <html:moz-page-nav-button id="category-sine-mods" view="paneSineMods"
-        iconsrc="${tabImage}" data-l10n-id="pane-${utils.brand}-mods-title" role="none"/>
-    `,
-    generalCategory.nextElementSibling,
-    true
-  );
-} else {
-  sineTab = domUtils.appendXUL(
-    categories,
-    `
-      <richlistitem id="category-sine-mods" class="category" value="paneSineMods" helpTopic="prefs-main"
-        data-l10n-id="category-${utils.brand}-mods" data-l10n-attrs="tooltiptext" align="center">
-        <image class="category-icon"/>
-        <label class="category-name" flex="1" data-l10n-id="pane-${utils.brand}-mods-title"/>
-      </richlistitem>
-    `,
-    generalCategory.nextElementSibling,
-    true
-  );
-}
-
-// Add Sine to the initaliztion object
-gCategoryInits.set("paneSineMods", {
-  _initted: true,
-  // eslint-disable-next-line no-empty-function
-  init: () => {},
-});
-
-if (location.hash === "#zenMarketplace" || location.hash === "#sineMods") {
-  sineIsActive = true;
-  document.querySelector("#categories").selectItem(sineTab);
-  for (const el of document.querySelectorAll('[data-category="paneGeneral"]')) {
-    el.setAttribute("hidden", "true");
-  }
-}
-
-const sineGroupData = `data-category="paneSineMods" ${sineIsActive ? "" : 'hidden="true"'}`;
-const prefPane = document.querySelector("#mainPrefPane") || document.querySelector("#paneDeck");
-const generalGroup = document.querySelector('[data-category="paneGeneral"]');
-domUtils.appendXUL(
-  prefPane,
-  `
-    <hbox id="SineModsCategory" class="subcategory" ${sineGroupData}>
-        <html:h1 data-l10n-id="pane-${utils.brand}-mods-title"/>
-    </hbox>
-`,
-  generalGroup,
-  true
+const { prefPane, generalGroup, sineGroupData, isZenSettings } = initSettingsPane(
+  window,
+  utils.brand,
+  typeof gCategoryInits === "undefined" ? null : gCategoryInits
 );
+
+// Zen provides its own heading, synchronized with the selected sidebar tab.
+if (!isZenSettings) {
+  domUtils.appendXUL(
+    prefPane,
+    `
+      <hbox id="SineModsCategory" class="subcategory" ${sineGroupData}>
+          <html:h1 data-l10n-id="pane-${utils.brand}-mods-title"/>
+      </hbox>
+    `,
+    generalGroup,
+    true
+  );
+}
 
 // Create group.
 domUtils.appendXUL(
@@ -231,12 +193,13 @@ const loadPrefs = async () => {
 
         if (pref.property === "sine.enable-dev") {
           prefEl.addEventListener("click", () => {
-            const commandPalette = windowRoot.window.document.querySelector(".sineCommandPalette");
-            if (commandPalette) {
-              commandPalette.remove();
+            const browserWindow = isZenSettings
+              ? Services.wm.getMostRecentWindow("navigator:browser")
+              : windowRoot.window;
+            if (browserWindow) {
+              browserWindow.document.querySelector(".sineCommandPalette")?.remove();
+              cmdPalette.register(browserWindow);
             }
-
-            cmdPalette.register();
           });
         }
 
@@ -340,6 +303,9 @@ document.querySelector(".sineItemConfigureButton").addEventListener("click", () 
 document
   .querySelector("#sineInstallationCustom .sineMarketplaceOpenButton:not(.sineItemConfigureButton)")
   .addEventListener("click", () => {
+    if (typeof newGroup.showPopover !== "function") {
+      return;
+    }
     newGroup.setAttribute("popover", "manual");
     newGroup.showPopover();
   });
@@ -348,8 +314,7 @@ let modsDisabled = Services.prefs.getBoolPref("sine.mods.disable-all", false);
 domUtils.appendXUL(
   prefPane,
   `
-        <groupbox id="sineInstalledGroup" class="highlighting-group subcategory"
-          ${sineIsActive ? "" : 'hidden=""'} data-category="paneSineMods">
+        <groupbox id="sineInstalledGroup" class="highlighting-group subcategory" ${sineGroupData}>
             <hbox id="sineInstalledHeader">
                 <html:h2 data-l10n-id="sine-mods-installed-header"/>
                 <html:moz-toggle class="sinePreferenceToggle" ${modsDisabled ? "" : 'pressed="true"'}
@@ -428,7 +393,7 @@ const checkForUpdates = async (source) => {
 };
 document.querySelector(".manual-update").addEventListener("click", () => checkForUpdates("manual"));
 document.querySelector("#sineModImport").addEventListener("click", async () => {
-  const input = document.createElement("input");
+  const input = document.createElementNS("http://www.w3.org/1999/xhtml", "input");
   input.type = "file";
   input.accept = ".json";
   input.style.display = "none";
@@ -506,11 +471,11 @@ document.querySelector("#sineModExport").addEventListener("click", async () => {
 
     temporalUrl = URL.createObjectURL(blob);
     // Creating a link to download the JSON file
-    temporalAnchor = document.createElement("a");
+    temporalAnchor = document.createElementNS("http://www.w3.org/1999/xhtml", "a");
     temporalAnchor.href = temporalUrl;
     temporalAnchor.download = "sine-mods-export.json";
 
-    document.body.append(temporalAnchor);
+    prefPane.append(temporalAnchor);
     temporalAnchor.click();
     temporalAnchor.remove();
   } catch (error) {

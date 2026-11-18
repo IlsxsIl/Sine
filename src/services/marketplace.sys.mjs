@@ -22,7 +22,7 @@ export default {
    * @param {object} manager - Instance of the singleton Manager class.
    */
   async loadPage(specificWindow = null, manager = null) {
-    const pages = utils.getProcesses(specificWindow, ["settings", "preferences"]);
+    const pages = utils.getSettingsWindows(specificWindow, "sineInstallationList");
     const installedMods = await utils.getMods();
     for (const window of pages) {
       const document = window.document;
