@@ -207,6 +207,21 @@ export default {
   },
 
   /**
+   * Returns initialized Sine settings tabs and standalone Zen settings windows.
+   *
+   * @param {Window | null} window - Optional settings window to return.
+   * @param {string} listId - DOM id that must exist before the window can be refreshed.
+   * @returns {Window[]} Settings windows ready to display the requested Sine content.
+   */
+  getSettingsWindows(window = null, listId = "sineModsList") {
+    return this.getProcesses(window, [
+      "settings",
+      "preferences",
+      "/content/zen-components/windows/zen-settings-window.xhtml",
+    ]).filter((win) => !win.closed && win.document.getElementById(listId));
+  },
+
+  /**
    * Returns auto-update enabled status.
    *
    * @returns {boolean} Auto-update status. If true, enabled. If false, disabled.

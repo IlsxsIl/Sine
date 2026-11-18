@@ -418,7 +418,7 @@ class Manager {
   async loadMods(specificWindow = null, modsChanged = null) {
     const installedMods = await utils.getMods();
 
-    const pages = utils.getProcesses(specificWindow, ["settings", "preferences"]);
+    const pages = utils.getSettingsWindows(specificWindow);
     for (const window of pages) {
       const document = window.document;
 

@@ -19,6 +19,7 @@
   const scriptName = {
     "/content/browser.xhtml": "browser.mjs",
     "/content/messenger.xhtml": "browser.mjs",
+    "/content/zen-components/windows/zen-settings-window.xhtml": "settings.mjs",
     settings: "settings.mjs",
     preferences: "settings.mjs",
   }[window.location.pathname];

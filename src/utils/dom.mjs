@@ -15,14 +15,14 @@
  */
 export const parseMD = (element, markdown, relativeURL) => {
   const win = element.documentGlobal;
-  const doc = win.defaultView;
+  const doc = element.ownerDocument;
 
   if (!doc.querySelector('link[href*="marked_styles.css"]')) {
-    const link = doc.createElement("link");
+    const link = doc.createElementNS("http://www.w3.org/1999/xhtml", "link");
     link.rel = "stylesheet";
     link.className = "marked-styles";
     link.href = "chrome://userscripts/content/assets/imports/marked_styles.css";
-    doc.head.append(link);
+    (doc.head || doc.querySelector("linkset") || doc.documentElement).append(link);
   }
 
   if (!win.marked) {
@@ -80,13 +80,13 @@ export const parseMD = (element, markdown, relativeURL) => {
  * @returns {HTMLElement} Element appended.
  */
 export const appendXUL = (parentElement, xulString, insertBefore = null, XUL = false) => {
+  const doc = parentElement.ownerDocument;
+  const win = doc.defaultView;
   let element;
   if (XUL) {
-    element = (typeof XUL === "function" ? XUL : window.MozXULElement).parseXULToFragment(
-      xulString
-    );
+    element = (typeof XUL === "function" ? XUL : win.MozXULElement).parseXULToFragment(xulString);
   } else {
-    element = new DOMParser().parseFromString(xulString, "text/html");
+    element = new win.DOMParser().parseFromString(xulString, "text/html");
     if (element.body.children.length) {
       element = element.body.firstChild;
     } else {
@@ -94,7 +94,7 @@ export const appendXUL = (parentElement, xulString, insertBefore = null, XUL = f
     }
   }
 
-  element = parentElement.ownerDocument.importNode(element, true);
+  element = doc.importNode(element, true);
 
   if (insertBefore) {
     parentElement.insertBefore(element, insertBefore);
@@ -154,10 +154,10 @@ export const injectLocale = (file, doc = document) => {
       link.remove();
     }
 
-    link = doc.createElement("link");
+    link = doc.createElementNS("http://www.w3.org/1999/xhtml", "link");
     link.setAttribute("rel", "localization");
     link.setAttribute("href", `${locale}/${file}.ftl`);
-    doc.head.append(link);
+    (doc.head || doc.querySelector("linkset") || doc.documentElement).append(link);
   };
 
   register();
@@ -168,7 +168,7 @@ export const injectLocale = (file, doc = document) => {
     },
   };
   Services.prefs.addObserver(pref, observer);
-  window.addEventListener(
+  doc.defaultView.addEventListener(
     "beforeunload",
     () => {
       Services.prefs.removeObserver(pref, observer);

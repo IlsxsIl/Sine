@@ -18,16 +18,20 @@ const ucAPI = ChromeUtils.importESModule(
 
 export default {
   // TODO: Split into several functions
-  /** Registers and injects the command palette. */
-  register() {
+  /**
+   * Registers and injects the command palette.
+   *
+   * @param {Window} browserWindow - Main browser window, not the standalone settings window.
+   */
+  register(browserWindow = windowRoot.window) {
     if (!Services.prefs.getBoolPref("sine.enable-dev", false)) {
       return;
     }
 
-    domUtils.injectLocale("sine-cmdpalette", windowRoot.window.document);
+    domUtils.injectLocale("sine-cmdpalette", browserWindow.document);
 
     const palette = domUtils.appendXUL(
-      windowRoot.window.document.body,
+      browserWindow.document.body,
       `
               <div class="sineCommandPalette" hidden="">
                   <div class="sineCommandInput" hidden=""></div>
@@ -132,7 +136,7 @@ export default {
       }
     });
 
-    windowRoot.window.document.addEventListener("keydown", (e) => {
+    browserWindow.document.addEventListener("keydown", (e) => {
       if (e.ctrlKey && e.shiftKey && e.key === "Y") {
         refreshCmds(options);
 
@@ -147,7 +151,7 @@ export default {
       }
     });
 
-    windowRoot.window.document.addEventListener("mousedown", (e) => {
+    browserWindow.document.addEventListener("mousedown", (e) => {
       let targetEl = e.target;
       while (targetEl) {
         if (targetEl === palette) {
